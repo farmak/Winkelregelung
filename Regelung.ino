@@ -31,9 +31,8 @@ float phi;
 float phi_p;
 float phi_pp;
 
-float phi_soll = 0; // Variable für den Sollwinkel
-float phi_ist = 0;
-float Toleranz = 0;
+float phi_soll = 0.000001; // Variable für den Sollwinkel
+float Toleranz = 0.15;
 
 byte motion1;  // Freezes DX and DY until they are read or MOTION is read again.
 int dx1; 
@@ -295,8 +294,11 @@ void setup() {
   mySwitch.switchOn("11001", "01000");
   delay(10000);
  
-  if (pixelsum1 < 40 | pixelsum2 < 40){   //Wenn die Nullmarkierung erreicht ist, dann ausschalten
-    delay(1000);
+  while (pixelsum1 > 70 /*& pixelsum2 > 70*/){   
+    
+  }
+    //Wenn die Nullmarkierung erreicht ist, dann ausschalten
+    delay(1000); //Verzögerung, damit die Nullmarkierung sicher überschritten ist
     mySwitch.switchOff("11001", "01000");
     delay(100); //Verzögerung der Funksteckdose
     // Winkel und Winkelgeschwindigkeit zum Ausschaltzeitpunkt
@@ -314,7 +316,7 @@ void setup() {
       tau = (phi - phi0)/phi_p0; // mechanische Zeitkonstante theta/d
   
     }
-  }
+  
 
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -327,33 +329,47 @@ void loop() {
   Serial.println("Gib den Sollwinkel ein...");
   
   // Warte auf Eingabe
-  while (Serial.available() != -1) {
+  while (phi_soll == 0.000001) {
+    while (Serial.available() == 0){
+    }
+  phi_soll = Serial.parseFloat();  
   }
-    // Sollwinkel = eingegebener Zahlenwert
-    phi_soll = Serial.parseFloat();
-
-    // Umrechnen auf den Bereich von 0° bis 360°
-    if (phi_soll < 0) {
-      phi_soll += 360;
-    }
-    if (phi_soll > 360) {
-      phi_soll -= 360; 
-    }
+  // Umrechnen auf den Bereich von 0° bis 360°
+  if (phi_soll < 0) {
+    phi_soll += 360;
+  }
+  if (phi_soll > 360) {
+    phi_soll -= 360; 
+  }
     
-    // Ausgabe des empfangenen Sollwerts
-    Serial.print("Sollwert: ");
-    Serial.println(phi_soll);
+  // Ausgabe des empfangenen Sollwerts
+  Serial.print("Sollwert: ");
+  Serial.println(phi_soll);
+  Serial.print("Istwert");
+  Serial.println(phi);
   
+  // Ist-Wert des Winkels abrufen
+  dumpDelta1();
+  dumpDelta2();
 
+  // Der Wert des Sensors mit dem größeren Winkel, wird als Ist-Wert genommen 
+  if (phi1 > phi2) {
+  phi = phi1;
+ }
+ else {
+  phi = phi2;
+ }
+  
   // Vergleiche Soll- und Ist-Wert  
-  if (phi_soll - phi_ist >= Toleranz | phi_soll - phi_ist <= Toleranz) { //Toleranzwerte festlegen
-    
+  if (phi_soll - phi >= Toleranz | phi_soll - phi <= Toleranz) { //Toleranzwerte festlegen
+    //Serial.println("ungleich");
     // Schalte Steckdose ein, falls Ist-Wert ungleich Soll-Wert
     mySwitch.switchOn("11001", "01000"); //Binärcode der Stellung der Dip-Schalter entsprechend     
   }
     else {
     
     // Schalte Steckdose aus 
+    //Serial.println("gleich");
     mySwitch.switchOff("11001", "01000");
     }
 
